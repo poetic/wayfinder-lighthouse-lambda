@@ -1,0 +1,12 @@
+{
+    "queryStringParameters": {
+        "url": "https://www.google.com/",
+        "testId": "lighthouse",
+        "onlyAudits": [
+            "speed-index"
+        ],
+        "onlyCategories": [
+            "performance"
+        ]
+    }
+}
