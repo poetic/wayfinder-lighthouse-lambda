@@ -26,9 +26,9 @@ if (!process.env.IS_LOCAL) {
     }
 }
 
-const { CHROME_FLAGS,
-    ONLY_CATEGORIES,
-    GET_STATISTICS
+const {
+    CHROME_FLAGS,
+    ONLY_CATEGORIES
 } = process.env;
 
 let chromeFlags = CHROME_FLAGS.split(',');
@@ -47,10 +47,6 @@ let lighthouseConfig = {
     }
 };
 
-let AuditRequestedList = GET_STATISTICS.split(',');
-let CategoryRequestedList = lighthouseConfig.settings.onlyCategories;
-
-
 exports.handler = async (event) => {
     console.log("BEGIN LAMBDA");
     console.log(event.body);
@@ -64,20 +60,18 @@ exports.handler = async (event) => {
         testId,
         onlyChromeFlags,
         onlyCategories,
-        onlyAudits } = _.get(params, "cmd");
+    } = _.get(params, "cmd");
 
-    await checkJsonRequestForCustomProcessingOnLighthouse(onlyChromeFlags, onlyCategories, onlyAudits);
+    await checkJsonRequestForCustomProcessingOnLighthouse(onlyChromeFlags, onlyCategories);
 
-    const fullResults = await launchChromeAndRunLighthouse(url);
-
-    const filteredResults = await getSpecifiedDataFromLighthouseResults(fullResults);
+    const results = await launchChromeAndRunLighthouse(url);
 
     const payload = {
         url,
         webhook,
         testId,
         testType: "lighthouse",
-        filteredResults
+        results
     };
 
     if (webhook) {
@@ -108,13 +102,8 @@ async function checkJsonRequestForCustomProcessingOnLighthouse(onlyChromeFlags, 
         chromeFlags = onlyChromeFlags;
     }
 
-    if (onlyAudits) {
-        AuditRequestedList = onlyAudits;
-    }
-
     if (onlyCategories) {
         lighthouseConfig.settings.onlyCategories = onlyCategories;
-        CategoryRequestedList = onlyCategories;
     }
 }
 
@@ -122,41 +111,11 @@ async function launchChromeAndRunLighthouse(url) {
     console.log("Launch Chrome And Run Lighthouse");
 
     try {
-        console.log("BEGIN CHROME LAUNCH");
         const chrome = await chromeLauncher.launch({ chromeFlags, chromePath });
         lighthouseFlags.port = chrome.port;
-        console.log("CHROME LAUNCHED");
         const results = await lighthouse(url, lighthouseFlags, lighthouseConfig);
         await chrome.kill();
         return results;
-    } catch (error) {
-        console.error(error);
-        throw error;
-    }
-}
-
-async function getSpecifiedDataFromLighthouseResults(results) {
-    console.log("Get Specified Data From Lighthouse Results");
-    try {
-        let audits = {};
-        AuditRequestedList.forEach(element => {
-            audits[element] = {
-                title: results.lhr.audits[element].title,
-                score: results.lhr.audits[element].score,
-                displayValue: results.lhr.audits[element].displayValue,
-                numericValue: results.lhr.audits[element].numericValue
-            };
-        });
-
-        let categories = {};
-        CategoryRequestedList.forEach(element => {
-            categories[element] = {
-                title: results.lhr.categories[element].title,
-                score: results.lhr.categories[element].score
-            };
-        });
-
-        return { audits, categories };
     } catch (error) {
         console.error(error);
         throw error;
