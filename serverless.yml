@@ -1,9 +1,19 @@
 service: wayfinder-lighthouse
+
+plugins:
+  - serverless-offline
+
+custom:
+  serverless-offline:
+    port: 7001
+
 provider:
   name: aws
   runtime: nodejs10.x
   region: us-east-1
   role: arn:aws:iam::425305670341:role/wayfinderLighthouseRole
+
+
 functions:
   LighthouseLambda:
     name: wayfinder-lighthouse
@@ -16,5 +26,7 @@ functions:
       ONLY_CATEGORIES: performance,accessibility,best-practices,seo
     layers:
       - arn:aws:lambda:us-east-1:425305670341:layer:lighthouse:1
-
-    
+    events:
+      - http: 
+          path: check
+          method: post
